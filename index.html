@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Макет пакета</title>
+
+  <!-- FileSaver.js для скачивания -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js "></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      margin: 0 auto;
+      max-width: 800px;
+    }
+
+    h2 {
+      text-align: center;
+      font-size: 1.5em;
+    }
+
+    #controls {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: flex;
+      flex-direction: column;
+      font-size: 14px;
+    }
+
+    input, select, button {
+      margin-top: 5px;
+      padding: 8px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    button {
+      background-color: #00aaff;
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #008ecc;
+    }
+
+    svg {
+      width: 100%;
+      height: auto;
+      max-height: 600px;
+      background-color: transparent;
+      border: none;
+    }
+
+    #dimensions {
+      margin-top: 10px;
+      font-weight: bold;
+      font-size: 16px;
+      text-align: center;
+      color: #333;
+    }
+
+    @media (max-width: 600px) {
+      input, select, button {
+        font-size: 14px;
+      }
+
+      #dimensions {
+        font-size: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<h2>Калькулятор макета пакета</h2>
+
+<div id="controls">
+  <label>Длина A (мм):
+    <input type="number" id="a" value="300">
+  </label>
+  <label>Ширина B (мм):
+    <input type="number" id="b" value="400">
+  </label>
+  <label>Высота C (мм):
+    <input type="number" id="c" value="120">
+  </label>
+  <label>Тип макета:
+    <select id="type">
+      <option value="half">Половина пакета</option>
+      <option value="full">Целый пакет</option>
+    </select>
+  </label>
+  <div style="display: flex; gap: 10px;">
+    <button onclick="calculate()" style="flex-grow: 1;">Рассчитать</button>
+    <button onclick="exportToSVG()" style="flex-grow: 1;">Скачать SVG</button>
+  </div>
+</div>
+
+<!-- Отображение размеров -->
+<div id="dimensions">Размеры макета: — × — мм</div>
+
+<!-- Макет -->
+<svg id="canvas" width="100%" height="600"></svg>
+
+<script>
+  function calculate() {
+    const A = parseInt(document.getElementById('a').value);
+    const B = parseInt(document.getElementById('b').value);
+    const C = parseInt(document.getElementById('c').value);
+    const type = document.getElementById('type').value;
+
+    let width, height;
+
+    if (type === 'half') {
+      width = A + C + 14;
+      height = B + 40 + (C / 2) + 20;
+    } else {
+      width = 2 * A + 2 * C + 14;
+      height = B + 40 + (C / 2) + 20;
+    }
+
+    // Показываем размеры макета
+    document.getElementById('dimensions').innerText = `Размеры макета: ${width} × ${height} мм`;
+
+    drawLayout(width, height, A, B, C);
+  }
+
+  function drawLayout(w, h, A, B, C) {
+    const svg = document.getElementById('canvas');
+    svg.innerHTML = ''; // Очистка предыдущего макета
+
+    const scale = 0.5;
+    const offsetX = 10;
+    const offsetY = 10;
+
+    // Вертикальные линии
+    let x1 = (C / 2 - 1) * scale;
+    let x2 = x1 + A * scale;
+    let x3 = x2 + (C / 2) * scale;
+    let x4 = x3 + (C / 2) * scale;
+    let x5 = x4 + A * scale;
+    let x6 = x5 + (C / 2) * scale;
+
+    const linesX = [x1, x2, x3];
+    if (document.getElementById('type').value === 'full') {
+      linesX.push(x4, x5, x6);
+    }
+
+    linesX.forEach(x => {
+      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      line.setAttribute("x1", offsetX + x);
+      line.setAttribute("y1", offsetY);
+      line.setAttribute("x2", offsetX + x);
+      line.setAttribute("y2", offsetY + h * scale);
+      line.setAttribute("stroke", "#00aaff");
+      line.setAttribute("stroke-width", "2");
+      svg.appendChild(line);
+    });
+
+    // Горизонтальные линии
+    const y1 = 40 * scale;
+    const y2 = y1 + B * scale;
+    const y3 = y2 - (C / 2) * scale;
+
+    [y1, y2].forEach(y => {
+      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      line.setAttribute("x1", offsetX);
+      line.setAttribute("y1", offsetY + y);
+      line.setAttribute("x2", offsetX + w * scale);
+      line.setAttribute("y2", offsetY + y);
+      line.setAttribute("stroke", "#00aaff");
+      line.setAttribute("stroke-width", "2");
+      svg.appendChild(line);
+    });
+
+    const lineY3 = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    lineY3.setAttribute("x1", offsetX);
+    lineY3.setAttribute("y1", offsetY + y3);
+    lineY3.setAttribute("x2", offsetX + x3);
+    lineY3.setAttribute("y2", offsetY + y3);
+    lineY3.setAttribute("stroke", "#00aaff");
+    lineY3.setAttribute("stroke-width", "2");
+    svg.appendChild(lineY3);
+
+    // Диагонали из точки x3_y3
+    const xStart = x3;
+    const yStart = y3;
+
+    // Диагональ 1: вправо-вниз (+45°)
+    let stepRight = Math.min(w * scale - xStart, h * scale - yStart);
+    let xEnd1 = xStart + stepRight;
+    let yEnd1 = yStart + stepRight;
+
+    const diag1 = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    diag1.setAttribute("x1", offsetX + xStart);
+    diag1.setAttribute("y1", offsetY + yStart);
+    diag1.setAttribute("x2", offsetX + xEnd1);
+    diag1.setAttribute("y2", offsetY + yEnd1);
+    diag1.setAttribute("stroke", "#00aaff");
+    diag1.setAttribute("stroke-width", "2");
+    svg.appendChild(diag1);
+
+    // Диагональ 2: влево-вниз (-45°)
+    let stepLeft = Math.min(xStart, h * scale - yStart);
+    let xEnd2 = xStart - stepLeft;
+    let yEnd2 = yStart + stepLeft;
+
+    const diag2 = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    diag2.setAttribute("x1", offsetX + xStart);
+    diag2.setAttribute("y1", offsetY + yStart);
+    diag2.setAttribute("x2", offsetX + xEnd2);
+    diag2.setAttribute("y2", offsetY + yEnd2);
+    diag2.setAttribute("stroke", "#00aaff");
+    diag2.setAttribute("stroke-width", "2");
+    svg.appendChild(diag2);
+
+    // Диагональ 3: от левой границы и y3 → вправо-вниз под 45°
+    const xStart3 = 0;
+    const yStart3 = y3;
+
+    let stepRight3 = Math.min(w * scale - xStart3, h * scale - yStart3);
+    let xEnd3 = xStart3 + stepRight3;
+    let yEnd3 = yStart3 + stepRight3;
+
+    const diag3 = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    diag3.setAttribute("x1", offsetX + xStart3);
+    diag3.setAttribute("y1", offsetY + yStart3);
+    diag3.setAttribute("x2", offsetX + xEnd3);
+    diag3.setAttribute("y2", offsetY + yEnd3);
+    diag3.setAttribute("stroke", "#00aaff");
+    diag3.setAttribute("stroke-width", "2");
+    svg.appendChild(diag3);
+
+    // Диагонали 4 и 5 только для целого пакета
+    if (document.getElementById('type').value === 'full') {
+      const xStart4 = x6;
+      const yStart4 = y3;
+
+      // Диагональ 4: вниз-влево под -45°
+      let step4 = Math.min(xStart4, h * scale - yStart4);
+      let xEnd4 = xStart4 - step4;
+      let yEnd4 = yStart4 + step4;
+
+      const diag4 = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      diag4.setAttribute("x1", offsetX + xStart4);
+      diag4.setAttribute("y1", offsetY + yStart4);
+      diag4.setAttribute("x2", offsetX + xEnd4);
+      diag4.setAttribute("y2", offsetY + yEnd4);
+      diag4.setAttribute("stroke", "#00aaff");
+      diag4.setAttribute("stroke-width", "2");
+      svg.appendChild(diag4);
+
+      // Диагональ 5: вниз-вправо под +45°
+      let step5 = Math.min(w * scale - xStart4, h * scale - yStart4);
+      let xEnd5 = xStart4 + step5;
+      let yEnd5 = yStart4 + step5;
+
+      const diag5 = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      diag5.setAttribute("x1", offsetX + xStart4);
+      diag5.setAttribute("y1", offsetY + yStart4);
+      diag5.setAttribute("x2", offsetX + xEnd5);
+      diag5.setAttribute("y2", offsetY + yEnd5);
+      diag5.setAttribute("stroke", "#00aaff");
+      diag5.setAttribute("stroke-width", "2");
+      svg.appendChild(diag5);
+    }
+  }
+
+  function exportToSVG() {
+    const A = parseInt(document.getElementById('a').value);
+    const B = parseInt(document.getElementById('b').value);
+    const C = parseInt(document.getElementById('c').value);
+    const svg = document.getElementById('canvas');
+
+    // Убедимся, что xmlns задан
+    if (!svg.getAttribute('xmlns')) {
+      svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    }
+
+    // Сериализуем SVG как строку
+    const serializer = new XMLSerializer();
+    const source = serializer.serializeToString(svg);
+
+    // Создаём файл и сохраняем
+    const blob = new Blob([source], { type: 'image/svg+xml;charset=utf-8' });
+    const filename = `Пакет ${A}x${B}x${C} мм.svg`;
+    saveAs(blob, filename);
+  }
+
+  window.onload = () => calculate();
+</script>
+
+</body>
+</html>
